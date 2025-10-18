@@ -125,8 +125,6 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: auth-service:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -134,6 +132,7 @@ jobs:
           image-ref: auth-service:${{ github.sha }}
           format: 'sarif'
           output: 'trivy-results.sarif'
+          skip-version-check: true
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
