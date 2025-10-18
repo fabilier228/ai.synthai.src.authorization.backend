@@ -124,6 +124,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
+          load: true
           tags: auth-service:${{ github.sha }}
 
       - name: Run Trivy vulnerability scanner
