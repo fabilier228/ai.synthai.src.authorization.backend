@@ -142,10 +142,3 @@ jobs:
         run: |
           # scan the locally loaded image and output SARIF
           trivy image --format sarif --output trivy-results.sarif auth-service:${{ github.sha }}
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-          token: ${{ github.token }}
