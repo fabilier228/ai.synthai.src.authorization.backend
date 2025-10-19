@@ -20,7 +20,7 @@ router.get('/detailed', (req, res) => {
     service: 'synthai-authorization-backend',
     version: process.env.npm_package_version || '1.0.0',
     environment: process.env.NODE_ENV || 'development',
-    memory: process.memoryUsage(),
+    memory: process.memoryUsage()
     // TODO: Add database and Keycloak connection checks
   };
 

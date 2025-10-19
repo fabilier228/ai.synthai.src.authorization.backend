@@ -9,7 +9,7 @@ router.get('/profile', async (req, res) => {
   try {
     // TODO: Implement user profile retrieval
     logger.info('User profile request', { ip: req.ip });
-    
+
     res.status(501).json({
       error: 'Not implemented yet',
       message: 'User profile functionality will be implemented'
@@ -27,7 +27,7 @@ router.put('/profile', async (req, res) => {
   try {
     // TODO: Implement user profile update
     logger.info('User profile update request', { ip: req.ip });
-    
+
     res.status(501).json({
       error: 'Not implemented yet',
       message: 'User profile update functionality will be implemented'

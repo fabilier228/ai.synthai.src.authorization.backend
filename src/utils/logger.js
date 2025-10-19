@@ -10,7 +10,7 @@ const logger = winston.createLogger({
     winston.format.errors({ stack: true }),
     winston.format.json()
   ),
-  defaultMeta: { 
+  defaultMeta: {
     service: 'synthai-auth-service',
     environment: process.env.NODE_ENV || 'development'
   },
@@ -32,22 +32,26 @@ const logger = winston.createLogger({
 
 // Add file transport for production
 if (process.env.NODE_ENV === 'production') {
-  logger.add(new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
-  }));
-  
-  logger.add(new winston.transports.File({
-    filename: 'logs/combined.log',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
-  }));
+  logger.add(
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
+    })
+  );
+
+  logger.add(
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
+    })
+  );
 }
 
 module.exports = logger;

@@ -14,25 +14,25 @@ const dbConfig = {
   // Connection pool settings
   max: 10, // Maximum number of connections
   idleTimeoutMillis: 30000, // 30 seconds
-  connectionTimeoutMillis: 2000, // 2 seconds
+  connectionTimeoutMillis: 2000 // 2 seconds
 };
 
 // Connect to database
 const connectDatabase = async () => {
   try {
     pool = new Pool(dbConfig);
-    
+
     // Test connection
     const client = await pool.connect();
     await client.query('SELECT NOW()');
     client.release();
-    
+
     logger.info('Database connected successfully', {
       host: dbConfig.host,
       port: dbConfig.port,
       database: dbConfig.database
     });
-    
+
     return pool;
   } catch (error) {
     logger.error('Database connection failed:', error);
@@ -46,18 +46,18 @@ const query = async (text, params) => {
   try {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
-    
+
     logger.debug('Database query executed', {
       query: text,
       duration: `${duration}ms`,
       rows: result.rowCount
     });
-    
+
     return result;
   } catch (error) {
     logger.error('Database query error:', {
       query: text,
-      params: params,
+      params,
       error: error.message
     });
     throw error;
