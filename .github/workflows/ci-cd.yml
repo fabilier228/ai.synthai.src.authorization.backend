@@ -56,8 +56,8 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: synthai_test
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -80,6 +80,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check POSTGRES_PASSWORD secret
+        run: |
+          if [ -z "${{ secrets.POSTGRES_PASSWORD }}" ]; then
+            echo "POSTGRES_PASSWORD is empty"
+            exit 1
+          else
+            echo "POSTGRES_PASSWORD is set"
+          fi
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -92,13 +101,13 @@ jobs:
       - name: Run unit tests
         run: npm run test
         env:
-          NODE_ENV: test
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: synthai_test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          REDIS_URL: redis://localhost:6379
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
 
       - name: Run test coverage
         run: npm run test:coverage
