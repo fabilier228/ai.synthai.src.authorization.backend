@@ -15,7 +15,6 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # Code Quality & Security Checks
   lint-and-security:
     name: Code Quality & Security
     runs-on: ubuntu-latest
@@ -44,10 +43,10 @@ jobs:
       - name: Check for outdated packages
         run: npm outdated || true
 
-  # Unit and Integration Tests
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    needs: [lint-and-security]
     strategy:
       matrix:
         node-version: [18, 20]
@@ -65,7 +64,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
       redis:
         image: redis:7-alpine
         options: >-
@@ -89,16 +87,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
+      - name: Run tests
         run: npm run test
         env:
-          NODE_ENV: ${{ secrets.NODE_ENV }}
-          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
-          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+          NODE_ENV: 'test'
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
+          REDIS_URL: redis://localhost:6379
 
       - name: Run test coverage
         run: npm run test:coverage
@@ -107,17 +105,14 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage/lcov.info
-          flags: unittests
-          name: auth-service-coverage
 
-  # Docker Build and Security Scan
   docker-build-scan:
     name: Docker Build & Security Scan
     permissions:
       contents: read
       security-events: write
     runs-on: ubuntu-latest
-    needs: [lint-and-security, test]
+    needs: [test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -125,7 +120,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (using existing Dockerfile)
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -138,7 +133,11 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-      - name: Run Trivy vulnerability scanner (CLI)
+      - name: Run Trivy vulnerability scanner
         run: |
-          # scan the locally loaded image and output SARIF
           trivy image --format sarif --output trivy-results.sarif auth-service:${{ github.sha }}
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
