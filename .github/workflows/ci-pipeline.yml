@@ -137,8 +137,3 @@ jobs:
       - name: Run Trivy vulnerability scanner
         run: |
           trivy image --format sarif --output trivy-results.sarif auth-service:${{ github.sha }}
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
