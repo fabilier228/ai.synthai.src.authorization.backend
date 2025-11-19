@@ -151,7 +151,7 @@ app.use(cookieParser());
 
 // Apply rate limiting
 app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/callback', authLimiter);
 app.use('/api/', limiter);
 app.use('/api/', speedLimiter);
 
