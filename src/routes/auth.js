@@ -79,18 +79,9 @@ router.get('/callback', async (req, res) => {
       user: userInfo
     });
   } catch (error) {
-    logger.error('Auth callback error:', {
-      message: error.message,
-      stack: error.stack,
-      responseStatus: error.response?.status,
-      responseData: error.response?.data,
-      responseHeaders: error.response?.headers
-    });
-  
     if (error.response) {
       return res.status(error.response.status).json({
         error: 'Error exchanging code for tokens',
-        // Jak data jest pusta, pokaż chociaż message
         details: error.response.data || error.message
       });
     }

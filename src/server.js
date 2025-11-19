@@ -37,7 +37,9 @@ if (process.env.REDIS_URL) {
     logger.info('Connected to Redis');
   });
 
-  redisClient.connect().catch(console.error);
+  redisClient.connect().catch(err => {
+    logger.error('Redis connection error on connect()', err);
+  });
 }
 
 // Security middleware

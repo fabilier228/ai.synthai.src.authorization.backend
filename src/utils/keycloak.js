@@ -18,8 +18,8 @@ const getConfig = () => {
   const internalUrl = KEYCLOAK_INTERNAL_URL;
 
   const config = {
-    publicUrl,   // do redirectu dla przeglądarki
-    internalUrl, // do zapytań z backendu
+    publicUrl,
+    internalUrl,
     realm: KEYCLOAK_REALM || 'synthai',
     clientId: KEYCLOAK_CLIENT_ID || 'synthai-logic-client',
     clientSecret: KEYCLOAK_CLIENT_SECRET,
