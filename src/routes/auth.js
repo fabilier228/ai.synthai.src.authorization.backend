@@ -1,5 +1,3 @@
-// src/routes/auth.js
-
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
@@ -16,7 +14,7 @@ const {
 router.get('/login', async (req, res) => {
   try {
     const redirectUri = resolveRedirectUri(req);
-    const { url, state, nonce } = getLoginUrl(redirectUri);
+    const { url, state, nonce } = getLoginUrl(redirectUri, 'login');
 
     // Save state/nonce/redirectUri in session to validate callback
     req.session.oauth2 = { state, nonce, redirectUri };
@@ -24,6 +22,29 @@ router.get('/login', async (req, res) => {
     return res.redirect(url);
   } catch (error) {
     logger.error('Login redirect error:', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    return res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+// GET /api/auth/register
+// Redirects browser to Keycloak registration page
+router.get('/register', async (req, res) => {
+  try {
+    const redirectUri = resolveRedirectUri(req);
+    const { url, state, nonce } = getLoginUrl(redirectUri, 'register');
+
+    // Save state/nonce/redirectUri in session to validate callback
+    req.session.oauth2 = { state, nonce, redirectUri };
+
+    return res.redirect(url);
+  } catch (error) {
+    logger.error('Register redirect error:', {
       error: error.message,
       stack: error.stack
     });
@@ -49,7 +70,6 @@ router.get('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid state' });
     }
 
-    // Używamy dokładnie tego samego redirect_uri co przy /login
     const redirectUri =
       req.session.oauth2?.redirectUri || resolveRedirectUri(req);
 
@@ -73,7 +93,6 @@ router.get('/callback', async (req, res) => {
     // Clean temp data
     delete req.session.oauth2;
 
-    // Na razie zwracamy JSON – frontend może zrobić redirect po swojej stronie
     return res.json({
       message: 'Logged in via Keycloak',
       user: userInfo

@@ -1,5 +1,3 @@
-// src/utils/keycloak.js
-
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('./logger');
@@ -52,7 +50,7 @@ const getRealmEndpoints = () => {
   };
 };
 
-// Jedno źródło prawdy dla redirect_uri
+// Central helper for computing redirect_uri
 const resolveRedirectUri = req => {
   const { redirectUri } = getConfig();
 
@@ -62,19 +60,18 @@ const resolveRedirectUri = req => {
 
   const dynamicUri = `${req.protocol}://${req.get('host')}/api/auth/callback`;
   logger.warn(
-    `KEYCLOAK_REDIRECT_URI nie jest ustawione – używam dynamicznego redirect URI: ${dynamicUri}`
+    `KEYCLOAK_REDIRECT_URI is not set – using dynamic redirect URI: ${dynamicUri}`
   );
   return dynamicUri;
 };
 
-// Buduje URL do logowania w Keycloak
-const getLoginUrl = (redirectUri, stateFromReq, nonceFromReq) => {
+// Builds the URL for logging in to Keycloak
+const getLoginUrl = (redirectUri, mode) => {
   const { clientId, publicUrl, realm } = getConfig();
+  const authEndpoint = mode === 'register' ? `${publicUrl}/realms/${realm}/protocol/openid-connect/registrations` : `${publicUrl}/realms/${realm}/protocol/openid-connect/auth`;
 
-  const authEndpoint = `${publicUrl}/realms/${realm}/protocol/openid-connect/auth`;
-
-  const state = stateFromReq || uuidv4();
-  const nonce = nonceFromReq || uuidv4();
+  const state = uuidv4();
+  const nonce = uuidv4();
 
   const url = new URL(authEndpoint);
   url.searchParams.set('client_id', clientId);
@@ -93,7 +90,7 @@ const getLoginUrl = (redirectUri, stateFromReq, nonceFromReq) => {
   return { url: url.toString(), state, nonce };
 };
 
-// Wymiana code -> tokeny
+// Exchange code -> tokens
 const exchangeCodeForTokens = async (code, redirectUri) => {
   const { clientId, clientSecret } = getConfig();
   const { tokenEndpoint } = getRealmEndpoints();
