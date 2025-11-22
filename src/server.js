@@ -37,7 +37,9 @@ if (process.env.REDIS_URL) {
     logger.info('Connected to Redis');
   });
 
-  redisClient.connect().catch(console.error);
+  redisClient.connect().catch(err => {
+    logger.error('Redis connection error on connect()', err);
+  });
 }
 
 // Security middleware
@@ -151,7 +153,7 @@ app.use(cookieParser());
 
 // Apply rate limiting
 app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/callback', authLimiter);
 app.use('/api/', limiter);
 app.use('/api/', speedLimiter);
 
