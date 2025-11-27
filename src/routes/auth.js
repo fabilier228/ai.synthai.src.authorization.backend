@@ -93,9 +93,15 @@ router.get('/callback', async (req, res) => {
     // Clean temp data
     delete req.session.oauth2;
 
-    return res.json({
-      message: 'Logged in via Keycloak',
-      user: userInfo
+    // CRITICAL: Save session before redirect
+    req.session.save((err) => {
+      if (err) {
+        logger.error('Session save error:', err);
+        return res.status(500).json({ error: 'Failed to save session' });
+      }
+      
+      // Redirect to frontend home page after successful authentication
+      return res.redirect(process.env.FRONTEND_URL || 'https://synthai.pl');
     });
   } catch (error) {
     if (error.response) {
