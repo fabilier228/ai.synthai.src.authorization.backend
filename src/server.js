@@ -22,6 +22,9 @@ const keycloakRoutes = require('./routes/keycloak');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy - required for apps behind reverse proxy (Nginx)
+app.set('trust proxy', 1);
+
 // Initialize Redis client
 let redisClient;
 if (process.env.REDIS_URL) {
@@ -128,10 +131,12 @@ app.use(
     saveUninitialized: false,
     name: 'synthai.sid',
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always use secure in production (HTTPS)
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax'
+      sameSite: 'none', // Allow cookies in all contexts (required for OAuth redirects)
+      domain: process.env.COOKIE_DOMAIN || undefined, // Share cookies across subdomains if needed
+      path: '/' // Cookie available for entire domain
     }
   })
 );
