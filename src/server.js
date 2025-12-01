@@ -13,7 +13,7 @@ const RedisStore = require('connect-redis').default;
 const redis = require('redis');
 
 const logger = require('./utils/logger');
-const { connectDatabase } = require('./utils/database');
+const { connectDatabase, initSchema } = require('./utils/database');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const healthRoutes = require('./routes/health');
@@ -131,7 +131,7 @@ app.use(
     saveUninitialized: false,
     name: 'synthai.sid',
     cookie: {
-      secure: true, // Always use secure in production (HTTPS)
+      secure: false, // Always use secure in production (HTTPS)
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'none', // Allow cookies in all contexts (required for OAuth redirects)
@@ -280,11 +280,15 @@ process.on('uncaughtException', error => {
 });
 
 // Start server
+
 const startServer = async () => {
   try {
     // Connect to database
     await connectDatabase();
     logger.info('Database connected successfully');
+
+    // INIT SCHEMA – stworzy tabelę jeśli jej nie ma
+    await initSchema();
 
     app.listen(PORT, () => {
       logger.info(`SynthAI Auth Service running on port ${PORT}`, {
