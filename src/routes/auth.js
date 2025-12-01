@@ -8,6 +8,8 @@ const {
   logoutFromKeycloak,
   resolveRedirectUri
 } = require('../utils/keycloak');
+const { updateLastLogin } = require('../utils/userLogins');
+const { getLastLogin } = require('../utils/userLogins');
 
 // GET /api/auth/login
 // Redirects browser to Keycloak login (Authorization Code Flow)
@@ -80,6 +82,7 @@ router.get('/callback', async (req, res) => {
       accessTokenPreview: tokenResponse.access_token?.slice(0, 30)
     });
     const userInfo = await getUserInfo(tokenResponse.access_token);
+    await updateLastLogin(userInfo.sub);
 
     // Save session (BFF style – tokens on backend, cookie HttpOnly)
     req.session.user = {
@@ -94,12 +97,12 @@ router.get('/callback', async (req, res) => {
     delete req.session.oauth2;
 
     // CRITICAL: Save session before redirect
-    req.session.save((err) => {
+    req.session.save(err => {
       if (err) {
         logger.error('Session save error:', err);
         return res.status(500).json({ error: 'Failed to save session' });
       }
-      
+
       // Redirect to frontend home page after successful authentication
       return res.redirect(process.env.FRONTEND_URL || 'https://synthai.pl');
     });
@@ -125,6 +128,10 @@ router.get('/me', async (req, res) => {
     }
 
     const userInfo = await getUserInfo(req.session.user.accessToken);
+
+    const lastLogin = await getLastLogin(userInfo.sub);
+
+    userInfo.last_login = lastLogin || null;
 
     return res.json({ user: userInfo });
   } catch (error) {

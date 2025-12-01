@@ -82,9 +82,29 @@ const closeConnection = async () => {
   }
 };
 
+const initSchema = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_last_login (
+        id SERIAL PRIMARY KEY,
+        keycloak_sub VARCHAR(255) NOT NULL UNIQUE,
+        last_login TIMESTAMP NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    logger.info('Database schema initialized (user_last_login table ready)');
+  } catch (error) {
+    logger.error('Schema initialization failed:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   connectDatabase,
   query,
   getClient,
-  closeConnection
+  closeConnection,
+  initSchema
 };
