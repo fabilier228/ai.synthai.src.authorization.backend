@@ -102,7 +102,7 @@ router.get('/callback', async (req, res) => {
         logger.error('Session save error:', err);
         return res.status(500).json({ error: 'Failed to save session' });
       }
-      
+
       // Redirect to frontend home page after successful authentication
       return res.redirect(process.env.FRONTEND_URL || 'https://synthai.pl');
     });
