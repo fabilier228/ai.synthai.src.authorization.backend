@@ -97,7 +97,7 @@ router.get('/callback', async (req, res) => {
     delete req.session.oauth2;
 
     // CRITICAL: Save session before redirect
-    req.session.save((err) => {
+    req.session.save(err => {
       if (err) {
         logger.error('Session save error:', err);
         return res.status(500).json({ error: 'Failed to save session' });
