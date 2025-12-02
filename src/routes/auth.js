@@ -172,12 +172,11 @@ router.post('/logout', async (req, res) => {
 
 // GET /api/auth/account/email
 router.get('/account/email', requireAuth, (req, res) => {
-  const keycloakUrl = process.env.KEYCLOAK_URL;        // np. http://localhost:8080
+  const keycloakUrl = process.env.KEYCLOAK_URL; // np. http://localhost:8080
   const realm = process.env.KEYCLOAK_REALM || 'synthai';
   const clientId =
     process.env.KEYCLOAK_FRONTEND_CLIENT_ID || 'synthai-frontend-client';
-  const frontendBase =
-    process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+  const frontendBase = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 
   const accountBase = `${keycloakUrl}/realms/${realm}/account`;
 
@@ -200,8 +199,7 @@ router.get('/account/password', requireAuth, (req, res) => {
   const realm = process.env.KEYCLOAK_REALM || 'synthai';
   const clientId =
     process.env.KEYCLOAK_FRONTEND_CLIENT_ID || 'synthai-frontend-client';
-  const frontendBase =
-    process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+  const frontendBase = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 
   const accountBase = `${keycloakUrl}/realms/${realm}/account`;
   const redirectBack = `${frontendBase}/profile`;
