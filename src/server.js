@@ -108,7 +108,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit for authorization endpoints
+  max: 50, // limit for authorization endpoints (higher for development)
   message: {
     error: 'Too many login attempts, please try again later.',
     retryAfter: '15 minutes'
@@ -131,10 +131,10 @@ app.use(
     saveUninitialized: false,
     name: 'synthai.sid',
     cookie: {
-      secure: false, // Always use secure in production (HTTPS)
+      secure: process.env.NODE_ENV === 'production', // Use secure only in production (HTTPS)
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'none', // Allow cookies in all contexts (required for OAuth redirects)
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'lax' for localhost, 'none' for production
       domain: process.env.COOKIE_DOMAIN || undefined, // Share cookies across subdomains if needed
       path: '/' // Cookie available for entire domain
     }

@@ -2,8 +2,41 @@ const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
 const requireAuth = require('../middleware/authenticated');
-const { getUserInfo } = require('../utils/keycloak');
+const { getUserInfo, getUsers, deleteUser } = require('../utils/keycloak');
 const { getLastLogin } = require('../utils/userLogins');
+
+// GET /api/users
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const users = await getUsers(req.session.user.accessToken);
+    res.json(users);
+  } catch (error) {
+    logger.error('Get users error:', error);
+    if (error.response && error.response.status === 403) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+// DELETE /api/users/:id
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await deleteUser(req.session.user.accessToken, id);
+    res.status(204).send();
+  } catch (error) {
+    logger.error('Delete user error:', error);
+    if (error.response && error.response.status === 403) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
 
 // GET /api/users/profile
 router.get('/profile', requireAuth, async (req, res) => {
