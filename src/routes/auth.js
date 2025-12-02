@@ -10,6 +10,7 @@ const {
 } = require('../utils/keycloak');
 const { updateLastLogin } = require('../utils/userLogins');
 const { getLastLogin } = require('../utils/userLogins');
+const requireAuth = require('../middleware/authenticated');
 
 // GET /api/auth/login
 // Redirects browser to Keycloak login (Authorization Code Flow)
@@ -167,6 +168,52 @@ router.post('/logout', async (req, res) => {
       error: 'Internal server error'
     });
   }
+});
+
+// GET /api/auth/account/email
+router.get('/account/email', requireAuth, (req, res) => {
+  const keycloakUrl = process.env.KEYCLOAK_URL;        // np. http://localhost:8080
+  const realm = process.env.KEYCLOAK_REALM || 'synthai';
+  const clientId =
+    process.env.KEYCLOAK_FRONTEND_CLIENT_ID || 'synthai-frontend-client';
+  const frontendBase =
+    process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+
+  const accountBase = `${keycloakUrl}/realms/${realm}/account`;
+
+  // gdzie ma wrócić link „Back to …” w Account Console
+  const redirectBack = `${frontendBase}/profile`; // wybierz ścieżkę jaka Ci pasuje
+
+  const params = new URLSearchParams({
+    referrer: clientId,
+    referrer_uri: redirectBack
+  });
+
+  const url = `${accountBase}/?${params.toString()}#/personal-info`;
+
+  return res.redirect(url);
+});
+
+// GET /api/auth/account/password
+router.get('/account/password', requireAuth, (req, res) => {
+  const keycloakUrl = process.env.KEYCLOAK_URL;
+  const realm = process.env.KEYCLOAK_REALM || 'synthai';
+  const clientId =
+    process.env.KEYCLOAK_FRONTEND_CLIENT_ID || 'synthai-frontend-client';
+  const frontendBase =
+    process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+
+  const accountBase = `${keycloakUrl}/realms/${realm}/account`;
+  const redirectBack = `${frontendBase}/profile`;
+
+  const params = new URLSearchParams({
+    referrer: clientId,
+    referrer_uri: redirectBack
+  });
+
+  const url = `${accountBase}/?${params.toString()}#/security/signingin`;
+
+  return res.redirect(url);
 });
 
 module.exports = router;
