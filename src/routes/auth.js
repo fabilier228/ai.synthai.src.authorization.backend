@@ -134,10 +134,11 @@ router.get('/me', async (req, res) => {
     const decodedToken = jwt.decode(req.session.user.accessToken);
     const realmRoles = decodedToken?.realm_access?.roles || [];
     const resourceAccess = decodedToken?.resource_access || {};
-    
+
     // Collect all client roles
-    const clientRoles = Object.values(resourceAccess)
-      .flatMap(client => client.roles || []);
+    const clientRoles = Object.values(resourceAccess).flatMap(
+      client => client.roles || []
+    );
 
     // Combine and deduplicate roles
     userInfo.roles = [...new Set([...realmRoles, ...clientRoles])];
