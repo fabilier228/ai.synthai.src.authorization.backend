@@ -172,7 +172,7 @@ router.post('/logout', async (req, res) => {
 
 // GET /api/auth/account/email
 router.get('/account/email', requireAuth, (req, res) => {
-  const keycloakUrl = process.env.KEYCLOAK_URL; // np. http://localhost:8080
+  const keycloakUrl = process.env.KEYCLOAK_URL;
   const realm = process.env.KEYCLOAK_REALM || 'synthai';
   const clientId =
     process.env.KEYCLOAK_FRONTEND_CLIENT_ID || 'synthai-frontend-client';
@@ -180,8 +180,7 @@ router.get('/account/email', requireAuth, (req, res) => {
 
   const accountBase = `${keycloakUrl}/realms/${realm}/account`;
 
-  // gdzie ma wrócić link „Back to …” w Account Console
-  const redirectBack = `${frontendBase}/profile`; // wybierz ścieżkę jaka Ci pasuje
+  const redirectBack = `${frontendBase}/profile`;
 
   const params = new URLSearchParams({
     referrer: clientId,
