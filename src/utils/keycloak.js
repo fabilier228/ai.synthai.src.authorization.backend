@@ -127,6 +127,30 @@ const getUserInfo = async accessToken => {
   return data;
 };
 
+const getUsers = async accessToken => {
+  const { internalUrl, realm } = getConfig();
+  const usersEndpoint = `${internalUrl}/admin/realms/${realm}/users`;
+
+  const { data } = await axios.get(usersEndpoint, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  return data;
+};
+
+const deleteUser = async (accessToken, userId) => {
+  const { internalUrl, realm } = getConfig();
+  const userEndpoint = `${internalUrl}/admin/realms/${realm}/users/${userId}`;
+
+  await axios.delete(userEndpoint, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+};
+
 const logoutFromKeycloak = async refreshToken => {
   const { clientId, clientSecret } = getConfig();
   const { logoutEndpoint } = getRealmEndpoints();
@@ -145,6 +169,8 @@ module.exports = {
   getLoginUrl,
   exchangeCodeForTokens,
   getUserInfo,
+  getUsers,
+  deleteUser,
   logoutFromKeycloak,
   resolveRedirectUri
 };
