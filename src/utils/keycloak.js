@@ -68,10 +68,7 @@ const resolveRedirectUri = req => {
 // Builds the URL for logging in to Keycloak
 const getLoginUrl = (redirectUri, mode) => {
   const { clientId, publicUrl, realm } = getConfig();
-  const authEndpoint =
-    mode === 'register'
-      ? `${publicUrl}/realms/${realm}/protocol/openid-connect/registrations`
-      : `${publicUrl}/realms/${realm}/protocol/openid-connect/auth`;
+  const authEndpoint = `${publicUrl}/realms/${realm}/protocol/openid-connect/auth`;
 
   const state = uuidv4();
   const nonce = uuidv4();
@@ -83,11 +80,17 @@ const getLoginUrl = (redirectUri, mode) => {
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('state', state);
   url.searchParams.set('nonce', nonce);
+  
+  // For registration, add kc_action parameter
+  if (mode === 'register') {
+    url.searchParams.set('kc_action', 'REGISTER');
+  }
 
   logger.info('Generated Keycloak login URL', {
     clientId,
     redirectUri,
-    authEndpoint
+    authEndpoint,
+    mode
   });
 
   return { url: url.toString(), state, nonce };
