@@ -25,24 +25,56 @@ const PORT = process.env.PORT || 3001;
 // Trust proxy - required for apps behind reverse proxy (Nginx)
 app.set('trust proxy', 1);
 
-// Initialize Redis client
+// Initialize Redis client - create but don't connect yet
 let redisClient;
-if (process.env.REDIS_URL) {
-  redisClient = redis.createClient({
-    url: process.env.REDIS_URL
-  });
+let redisConnected = false;
 
-  redisClient.on('error', err => {
-    logger.error('Redis connection error:', err);
-  });
+const initializeRedis = async () => {
+  if (process.env.REDIS_URL) {
+    try {
+      redisClient = redis.createClient({
+        url: process.env.REDIS_URL,
+        socket: {
+          reconnectStrategy: (retries) => {
+            // Retry with exponential backoff, max 10 seconds
+            const delay = Math.min(retries * 100, 10000);
+            logger.info(`Redis reconnection attempt ${retries}, delaying ${delay}ms`);
+            return delay;
+          }
+        }
+      });
 
-  redisClient.on('connect', () => {
-    logger.info('Connected to Redis');
-  });
+      redisClient.on('error', err => {
+        logger.error('Redis connection error:', err);
+        redisConnected = false;
+      });
 
-  redisClient.connect().catch(err => {
-    logger.error('Redis connection error on connect()', err);
-  });
+      redisClient.on('connect', () => {
+        logger.info('Connected to Redis');
+        redisConnected = true;
+      });
+
+      redisClient.on('reconnecting', () => {
+        logger.info('Redis reconnecting...');
+      });
+
+      redisClient.on('ready', () => {
+        logger.info('Redis client ready');
+        redisConnected = true;
+      });
+
+      // Wait for connection
+      await redisClient.connect();
+      redisConnected = true;
+      logger.info('Redis successfully connected and ready');
+      return true;
+    } catch (err) {
+      logger.error('Failed to connect to Redis:', err);
+      redisConnected = false;
+      return false;
+    }
+  }
+  return true;
 }
 
 // Security middleware
@@ -122,24 +154,49 @@ const speedLimiter = slowDown({
   delayMs: 500 // add 500ms delay per request after exceeding delayAfter
 });
 
-// Session configuration
-app.use(
-  session({
-    store: redisClient ? new RedisStore({ client: redisClient }) : undefined,
-    secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
-    resave: false,
-    saveUninitialized: false,
-    name: 'synthai.sid',
-    cookie: {
-      secure: process.env.NODE_ENV === 'production', // Use secure only in production (HTTPS)
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'lax' for localhost, 'none' for production
-      domain: process.env.COOKIE_DOMAIN || undefined, // Share cookies across subdomains if needed
-      path: '/' // Cookie available for entire domain
-    }
-  })
-);
+// Session configuration - will be set up after Redis is initialized
+let sessionMiddleware;
+
+// Initialize and apply session middleware
+const configureSessionMiddleware = () => {
+  if (redisClient && redisConnected) {
+    sessionMiddleware = session({
+      store: new RedisStore({ client: redisClient }),
+      secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
+      resave: false,
+      saveUninitialized: false,
+      name: 'synthai.sid',
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.COOKIE_DOMAIN || undefined,
+        path: '/'
+      }
+    });
+    logger.info('Session middleware configured with Redis store');
+  } else {
+    // Fallback to memory store (not recommended for production)
+    sessionMiddleware = session({
+      secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
+      resave: false,
+      saveUninitialized: false,
+      name: 'synthai.sid',
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.COOKIE_DOMAIN || undefined,
+        path: '/'
+      }
+    });
+    logger.warn('Session middleware configured with memory store - not recommended for production!');
+  }
+
+  app.use(sessionMiddleware);
+};
 
 // Body parser
 app.use(
@@ -156,97 +213,100 @@ app.use(
 );
 app.use(cookieParser());
 
-// Apply rate limiting
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/callback', authLimiter);
-app.use('/api/', limiter);
-app.use('/api/', speedLimiter);
+// Setup routes and remaining middleware after session is configured
+const configureRoutes = () => {
+  // Apply rate limiting
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/callback', authLimiter);
+  app.use('/api/', limiter);
+  app.use('/api/', speedLimiter);
 
-// Request ID middleware
-app.use((req, res, next) => {
-  req.id = require('uuid').v4();
-  res.setHeader('X-Request-ID', req.id);
-  next();
-});
+  // Request ID middleware
+  app.use((req, res, next) => {
+    req.id = require('uuid').v4();
+    res.setHeader('X-Request-ID', req.id);
+    next();
+  });
 
-// Request logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
+  // Request logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
 
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logger.info('HTTP Request', {
-      requestId: req.id,
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.info('HTTP Request', {
+        requestId: req.id,
+        method: req.method,
+        url: req.originalUrl,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    });
+
+    next();
+  });
+
+  // Routes
+  app.use('/health', healthRoutes);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/keycloak', keycloakRoutes);
+
+  // API Documentation endpoint
+  app.get('/api', (req, res) => {
+    res.json({
+      service: 'SynthAI Authorization Service',
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      endpoints: {
+        health: '/health',
+        auth: '/api/auth',
+        users: '/api/users',
+        keycloak: '/api/keycloak'
+      },
+      documentation: 'https://docs.synthai.com/api/auth'
     });
   });
 
-  next();
-});
+  // 404 handler
+  app.use('*', (req, res) => {
+    logger.warn(`404 - Endpoint not found: ${req.originalUrl}`, {
+      method: req.method,
+      ip: req.ip
+    });
 
-// Routes
-app.use('/health', healthRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/keycloak', keycloakRoutes);
-
-// API Documentation endpoint
-app.get('/api', (req, res) => {
-  res.json({
-    service: 'SynthAI Authorization Service',
-    version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      users: '/api/users',
-      keycloak: '/api/keycloak'
-    },
-    documentation: 'https://docs.synthai.com/api/auth'
-  });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  logger.warn(`404 - Endpoint not found: ${req.originalUrl}`, {
-    method: req.method,
-    ip: req.ip
+    res.status(404).json({
+      error: 'Endpoint not found',
+      path: req.originalUrl,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
   });
 
-  res.status(404).json({
-    error: 'Endpoint not found',
-    path: req.originalUrl,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
-});
+  // Error handler
+  app.use((err, req, res, _next) => {
+    logger.error('Unhandled error:', {
+      error: err.message,
+      stack: err.stack,
+      requestId: req.id,
+      url: req.originalUrl,
+      method: req.method
+    });
 
-// Error handler
-app.use((err, req, res, _next) => {
-  logger.error('Unhandled error:', {
-    error: err.message,
-    stack: err.stack,
-    requestId: req.id,
-    url: req.originalUrl,
-    method: req.method
-  });
+    // Don't expose error details in production
+    const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Don't expose error details in production
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
-  res.status(err.status || 500).json({
-    error: 'Internal server error',
-    message: isDevelopment ? err.message : 'Something went wrong',
-    requestId: req.id,
-    timestamp: new Date().toISOString(),
-    ...(isDevelopment && { stack: err.stack })
+    res.status(err.status || 500).json({
+      error: 'Internal server error',
+      message: isDevelopment ? err.message : 'Something went wrong',
+      requestId: req.id,
+      timestamp: new Date().toISOString(),
+      ...(isDevelopment && { stack: err.stack })
+    });
   });
-});
+};
 
 // Graceful shutdown
 const gracefulShutdown = async signal => {
@@ -283,12 +343,24 @@ process.on('uncaughtException', error => {
 
 const startServer = async () => {
   try {
+    // Initialize Redis first
+    const redisReady = await initializeRedis();
+    if (!redisReady) {
+      logger.warn('Redis initialization failed or not available, will use memory store');
+    }
+
+    // Configure session middleware after Redis is initialized
+    configureSessionMiddleware();
+
     // Connect to database
     await connectDatabase();
     logger.info('Database connected successfully');
 
     // INIT SCHEMA – stworzy tabelę jeśli jej nie ma
     await initSchema();
+
+    // Configure and register routes
+    configureRoutes();
 
     app.listen(PORT, () => {
       logger.info(`SynthAI Auth Service running on port ${PORT}`, {

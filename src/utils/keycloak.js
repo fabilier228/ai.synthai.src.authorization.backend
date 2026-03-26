@@ -8,25 +8,31 @@ const getConfig = () => {
     KEYCLOAK_INTERNAL_URL,
     KEYCLOAK_REALM,
     KEYCLOAK_CLIENT_ID,
+    KEYCLOAK_AUTH_CLIENT_ID,
     KEYCLOAK_CLIENT_SECRET,
+    KEYCLOAK_AUTH_CLIENT_SECRET,
     KEYCLOAK_REDIRECT_URI
   } = process.env;
 
   const publicUrl = KEYCLOAK_URL;
   const internalUrl = KEYCLOAK_INTERNAL_URL;
 
+  // Use AUTH_CLIENT_ID if available, fall back to CLIENT_ID for backward compatibility
+  const clientId = KEYCLOAK_AUTH_CLIENT_ID || KEYCLOAK_CLIENT_ID || 'synthai-auth-client';
+  const clientSecret = KEYCLOAK_AUTH_CLIENT_SECRET || KEYCLOAK_CLIENT_SECRET;
+
   const config = {
     publicUrl,
     internalUrl,
     realm: KEYCLOAK_REALM || 'synthai',
-    clientId: KEYCLOAK_CLIENT_ID || 'synthai-logic-client',
-    clientSecret: KEYCLOAK_CLIENT_SECRET,
+    clientId,
+    clientSecret,
     redirectUri: KEYCLOAK_REDIRECT_URI
   };
 
-  if (!KEYCLOAK_CLIENT_ID) {
+  if (!clientId) {
     logger.warn(
-      'KEYCLOAK_CLIENT_ID is not set; using fallback "synthai-logic-client". Upewnij się, że taki client istnieje w Keycloak.'
+      'KEYCLOAK_AUTH_CLIENT_ID is not set; using fallback "synthai-auth-client". Upewnij się, że taki client istnieje w Keycloak.'
     );
   }
 
