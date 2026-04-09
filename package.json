@@ -8,6 +8,8 @@
     "dev": "nodemon src/server.js",
     "build": "node src/server.js",
     "test": "jest",
+    "test:int": "jest --runInBand --testPathPattern=tests/integration/.*\\.int\\.test\\.js",
+    "test:int:watch": "jest --watch --runInBand --testPathPattern=tests/integration/.*\\.int\\.test\\.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/",
