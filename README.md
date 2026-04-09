@@ -44,6 +44,20 @@ npm test
 npm audit
 ```
 
+## Integration Test Reports
+
+Generate integration tests with machine-readable and HTML reports:
+
+```bash
+npm run test:int:report
+```
+
+Generated artifacts:
+
+- `reports/integration/junit.xml` (JUnit XML for CI)
+- `reports/integration/report.html` (human-readable HTML report)
+- `reports/integration/coverage/` (coverage output)
+
 **How to trigger on GitHub?**
 
 - Push or pull request to any branch
