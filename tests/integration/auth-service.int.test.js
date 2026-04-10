@@ -30,11 +30,39 @@ describe('Authorization backend integration tests', () => {
     expect(response.body.error).toBe('Access denied');
   });
 
+  test('GET /api should return service metadata', async () => {
+    const response = await api().get('/api').expect(200);
+
+    expect(response.body.service).toContain('Authorization Service');
+    expect(response.body.endpoints).toBeDefined();
+    expect(response.body.endpoints.auth).toBe('/api/auth');
+  });
+
   test('GET /api/auth/login should redirect to Keycloak', async () => {
     const response = await api().get('/api/auth/login').redirects(0).expect(302);
 
     expect(response.headers.location).toContain('/protocol/openid-connect/auth');
     expect(response.headers.location).toContain('client_id=');
     expect(response.headers.location).toContain('redirect_uri=');
+  });
+
+  test('GET /api/auth/register should redirect to Keycloak', async () => {
+    const response = await api().get('/api/auth/register').redirects(0).expect(302);
+
+    expect(response.headers.location).toContain('/protocol/openid-connect/registrations');
+    expect(response.headers.location).toContain('client_id=');
+    expect(response.headers.location).toContain('redirect_uri=');
+  });
+
+  test('GET /api/auth/me should return 401 without session', async () => {
+    const response = await api().get('/api/auth/me').expect(401);
+
+    expect(response.body.error).toContain('Not authenticated');
+  });
+
+  test('POST /api/auth/logout should return success even without session user', async () => {
+    const response = await api().post('/api/auth/logout').expect(200);
+
+    expect(response.body.message).toBe('Logged out');
   });
 });
